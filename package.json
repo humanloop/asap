@@ -1,0 +1,30 @@
+{
+  "name": "asap",
+  "version": "1.0.0",
+  "description": "Autonomous Shell Assistant Program",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "npx tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "bin": {
+    "asap": "./dist/index.js"
+  },
+  "author": "Harry Xie, George Seabridge",
+  "license": "ISC",
+  "dependencies": {
+    "@inquirer/prompts": "^3.0.4",
+    "chalk": "^4.1.2",
+    "commander": "^11.0.0",
+    "dotenv": "^16.3.1",
+    "escape-string-regexp": "^4.0.0",
+    "humanloop": "^0.5.5",
+    "ora": "^5.4.1"
+  },
+  "devDependencies": {
+    "@commander-js/extra-typings": "^11.0.0",
+    "@types/node": "^20.5.9",
+    "typescript": "^5.2.2"
+  }
+}
