@@ -7,8 +7,6 @@ const humanloop = new Humanloop({
 });
 // TODO: Consider warning users if these env vars are not set.
 
-const USE_HUMANLOOP_DIRECTLY = true;
-
 export const chat = async (messages: ChatMessage[]): Promise<ChatMessage> => {
   let MAX_ATTEMPTS = 9;
   let attempts = 0;
@@ -22,28 +20,15 @@ export const chat = async (messages: ChatMessage[]): Promise<ChatMessage> => {
 
     try {
       let response: ChatResponse;
-      if (USE_HUMANLOOP_DIRECTLY) {
-        response = (
-          await humanloop.chatDeployed({
-            project: "asap",
-            inputs: {},
-            messages,
-          })
-        ).data;
-      } else {
-        response = await (
-          await fetch("https://asap.fly.dev/asap", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              inputs: {},
-              messages,
-            }),
-          })
-        ).json();
-      }
+
+      response = (
+        await humanloop.chatDeployed({
+          project: "asap",
+          inputs: {},
+          messages,
+        })
+      ).data;
+
       return handleSuccessfulGeneration(response);
     } catch (e: any) {
       if (e.status === 429) {
@@ -155,28 +140,15 @@ export const getRelevantExecutables = async ({
   inputs: { query: string; executables: string };
 }): Promise<string[]> => {
   let response: ChatResponse;
-  if (USE_HUMANLOOP_DIRECTLY) {
-    response = (
-      await humanloop.chatDeployed({
-        project: "asap-path-executables",
-        inputs,
-        messages: [],
-      })
-    ).data;
-  } else {
-    response = await (
-      await fetch("https://asap.fly.dev/asap-path-executables", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          inputs,
-          messages: [],
-        }),
-      })
-    ).json();
-  }
+
+  response = (
+    await humanloop.chatDeployed({
+      project: "asap-path-executables",
+      inputs,
+      messages: [],
+    })
+  ).data;
+
   const output = response.data[0].output;
   // Return a list of string from `output`'s comma-separated list
   return output.split(",").map((s: string) => s.trim());
