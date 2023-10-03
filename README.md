@@ -2,7 +2,16 @@
 
 Fix bugs and understand issues in your codebase. Powered by GPT-4.
 
-Run something like `asap do "fix my type errors"` and the agent will attempt to understand the issue, read the relevant code, figure out the fix, apply a patch to your files, checkout a fresh git branch and commit the changes. You'll be able to step in with assistance or confirmations at various stages to help guide the process.
+Run something like `asap do "fix my type errors"` and the agent will:
+
+- attempt to understand the issue
+- read the relevant code
+- figure out the fix
+- apply a patch to your files
+- checkout a fresh git branch
+- and, commit the changes.
+
+You'll be able to step in with assistance or confirmations at various stages to help guide the process.
 
 ## Prerequisites
 
