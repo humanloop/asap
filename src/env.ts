@@ -12,6 +12,7 @@ config({
 
 export const HUMANLOOP_BASE_URL = process.env.HUMANLOOP_BASE_URL;
 export const HUMANLOOP_API_KEY = process.env.HUMANLOOP_API_KEY;
+export const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 // console.log("Loaded environment variables:");
 // console.log(`HUMANLOOP_BASE_URL: ${HUMANLOOP_BASE_URL}`);

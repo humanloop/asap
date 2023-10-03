@@ -1,11 +1,11 @@
 import { ChatMessage, ChatResponse, Humanloop, ToolCall } from "humanloop";
-import { HUMANLOOP_API_KEY, HUMANLOOP_BASE_URL } from "./env";
+import { HUMANLOOP_API_KEY, HUMANLOOP_BASE_URL, OPENAI_API_KEY } from "./env";
 
 const humanloop = new Humanloop({
   basePath: HUMANLOOP_BASE_URL,
   apiKey: HUMANLOOP_API_KEY,
+  openaiApiKey: OPENAI_API_KEY,
 });
-// TODO: Consider warning users if these env vars are not set.
 
 export const chat = async (messages: ChatMessage[]): Promise<ChatMessage> => {
   let MAX_ATTEMPTS = 9;
