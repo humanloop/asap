@@ -31,7 +31,9 @@ To start using `asap`, do the following:
 
 If you want to work on developing `asap`, run `npm run dev` in a new terminal. This will run the Typescript compiler in watch mode so that next time you run `asap do "..."` you'll get the latest behaviour. To work on improving your prompts, we recommend using the Humanloop editor and [environment deployments](https://docs.humanloop.com/docs/deploy-to-an-environment) to control which model configuration you target.
 
-## How it works: Tool Calling
+## How it works
+
+### Tool Calling
 
 `asap` works by including a "tool call" in the prompt which tells GPT-4 that it can request running any command in your terminal to help debug the issues and answer the questions you ask. Tool calls correspond to [function calling](https://openai.com/blog/function-calling-and-other-api-updates#function-calling) for OpenAI models. The basic concept is that you can define certain functions that the model is allowed to call by providing a description and function signature; if the model calls your function, you perform whatever processing is necessary to determine the output and provide this back to the model in the next chat message.
 
