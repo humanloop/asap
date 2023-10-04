@@ -58,7 +58,7 @@ You can inspect the exact definition of these tools in the Humanloop Editor (aft
 
 ### Retrieval Augmented Generation
 
-This example repo also demonstrates an application of RAG - retrieval augmented generation - using Humanloop. In order to create the project, we relied heavily on Humanloop's playground, logging and monitoring, and deployed model configuration functionality.
+This example repo also demonstrates an application of RAG - retrieval augmented generation - using Humanloop.
 
 In order to work effectively, `asap` retrieves two forms of contextual information about the directory / repository it was called from, and feeds these to the LLM in the system prompt.
 
@@ -66,7 +66,7 @@ In order to work effectively, `asap` retrieves two forms of contextual informati
 
    - To use ctags with `asap`, first install [`universal-ctags`](https://github.com/universal-ctags/ctags) (e.g. with Homebrew), and pass the `--ctags` flag to the `asap do` command.
 
-1. **path executables** - in order to provide `asap` with information about what commands it can call from the user's CLI, we [...]
+1. **path executables** - in order to provide `asap` with information about what commands it can call from the user's CLI, we first produce a list of the available executables on the user's `PATH`, and then send this (usually very long) list to a smaller, specialised model config (see `model-configs/asap-path-exec-model-config.json`, or visit the `asap-path-executables` project in Humanloop after running `asap init`). As well as the full list of path executables, the smaller model receives the original user query. It is prompted to filter the list to a narrower set that are likely to be useful for solving the given problem. This narrower set is then passed to the main gpt4-32k model which attempts to solve the problem using those tools at its disposal.
 
 ## Examples
 
