@@ -56,18 +56,6 @@ In addition to the CLI tool call, there are a couple more tool calls exposed to 
 
 You can inspect the exact definition of these tools in the Humanloop Editor (after you have setup with `asap init`).
 
-### Retrieval Augmented Generation
-
-This example repo also demonstrates an application of RAG - retrieval augmented generation - using Humanloop.
-
-In order to work effectively, `asap` retrieves two forms of contextual information about the directory / repository it was called from, and feeds these to the LLM in the system prompt.
-
-1. [**ctags**](https://github.com/universal-ctags/ctags) is a tool that indexes language object found in source files for programming languages. It's usually used for text editors and other tools to quickly locate indexed items. We use it here as a way to produce a relatively compressed view representation of the codebase for passing into the LLM context.
-
-   - To use ctags with `asap`, first install [`universal-ctags`](https://github.com/universal-ctags/ctags) (e.g. with Homebrew), and pass the `--ctags` flag to the `asap do` command.
-
-1. **path executables** - in order to provide `asap` with information about what commands it can call from the user's CLI, we first produce a list of the available executables on the user's `PATH`, and then send this (usually very long) list to a smaller, specialised model config (see `model-configs/asap-path-exec-model-config.json`, or visit the `asap-path-executables` project in Humanloop after running `asap init`). As well as the full list of path executables, the smaller model receives the original user query. It is prompted to filter the list to a narrower set that are likely to be useful for solving the given problem. This narrower set is then passed to the main gpt4-32k model which attempts to solve the problem using those tools at its disposal.
-
 ## Examples
 
 Try running `asap` on the examples in the `/examples` directory in the project repo. For instance:
