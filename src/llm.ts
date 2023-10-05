@@ -61,11 +61,8 @@ const handleSuccessfulGeneration = (response: ChatResponse): ChatMessage => {
   if (data.finish_reason !== "tool_call") {
     return { role: "assistant", content: data.output };
   } else {
-    // TODO: hackily retrieve this from the raw provider response because
-    // the Humanloop API is dropping it.
     const toolCall = response.provider_responses[0].choices[0].message
       .function_call as ToolCall;
-    // const toolCall = JSON.parse(toolCallRaw) as ToolCall;
     return {
       role: "assistant",
       tool_call: toolCall,
