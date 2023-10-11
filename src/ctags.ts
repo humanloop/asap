@@ -1,8 +1,9 @@
 import { ShellCommandOutput } from "./llm";
-import { runCommand } from "./runCommand";
+import { PersistentShell } from "./runCommand";
 
 const runCtagCommand = (): Promise<ShellCommandOutput> => {
-  return runCommand({
+  const shell = new PersistentShell();
+  return shell.executeCommand({
     command: "ctags --fields=+S --output-format=json -R .",
     args: [],
     explanation: "Generate ctags for the current project",
