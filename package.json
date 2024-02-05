@@ -20,7 +20,7 @@
     "commander": "^11.0.0",
     "dotenv": "^16.3.1",
     "escape-string-regexp": "^4.0.0",
-    "humanloop": "^0.5.5",
+    "humanloop": "^0.6.6",
     "ora": "^5.4.1"
   },
   "devDependencies": {
