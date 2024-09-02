@@ -1,0 +1,21 @@
+{
+  "provider": "openai",
+  "model": "gpt-3.5-turbo-16k",
+  "max_tokens": -1,
+  "temperature": 0.3,
+  "top_p": 1,
+  "stop": null,
+  "presence_penalty": 0,
+  "frequency_penalty": 0,
+  "endpoint": "chat",
+  "template": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant. You will be given the list of executables available in the user's path, retrieved using `echo $PATH | tr ':' '\\n' | xargs -I {} ls {} 2>/dev/null | sort -u | tr '\\n' ','`. Return short filtered version of the list containing a list of arguments that may be relevant in answering the user's query. Return the list in comma-separated format.\n\nThis list should include commonly-used commands like `cat`, `grep` and other useful file utilities."
+    },
+    {
+      "role": "system",
+      "content": "Query: \n{{query}}\n\nList of executables:\n{{executables}}"
+    }
+  ]
+}

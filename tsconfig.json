@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "dist",
+    "outDir": "asap",
     "strict": true,
     "target": "es6",
     "module": "CommonJS",

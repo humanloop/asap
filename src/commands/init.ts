@@ -1,9 +1,10 @@
 import { Command } from "@commander-js/extra-typings";
 import { input, confirm, select } from "@inquirer/prompts";
 import { ENV_PATH } from "../env";
-import { Humanloop, ProjectResponse } from "humanloop";
 import fs from "node:fs";
 import path from "node:path";
+import { HumanloopClient } from "humanloop";
+import { PromptResponse } from "humanloop/api";
 
 type HumanloopEnvironmentName = "staging" | "production";
 
@@ -16,12 +17,12 @@ type HumanloopEnvironment = {
 const HUMANLOOP_ENVIRONMENTS: HumanloopEnvironment[] = [
   {
     name: "production",
-    baseUrl: "https://api.humanloop.com/v4",
+    baseUrl: "https://api.humanloop.com/v5",
     appUrl: "https://app.humanloop.com",
   },
   {
     name: "staging",
-    baseUrl: "https://neostaging.humanloop.ml/v4",
+    baseUrl: "https://neostaging.humanloop.ml/v5",
     appUrl: "https://stg.humanloop.com",
   },
 ];
@@ -98,164 +99,69 @@ const ensureHumanloopAsapProjects = async (
   humanloopApiKey: string
 ): Promise<string> => {
   // Create the Humanloop client.
-  const humanloop = new Humanloop({
-    basePath: humanloopBaseUrl,
+  const humanloop = new HumanloopClient({
+    environment: humanloopBaseUrl,
     apiKey: humanloopApiKey,
   });
 
-  // Iterate the paginated list of projects until a project called `asap` is found.
-  let page = 0;
-  let totalProjects;
-  let searchedProjects = 0;
-  let asapProject: ProjectResponse | undefined = undefined;
-  let asapPathExecutablesProject: ProjectResponse | undefined = undefined;
+  let page = 1;
+  let asapPrompt: PromptResponse | undefined = undefined;
+  let asapPathExecutablesPrompt: PromptResponse | undefined = undefined;
 
-  console.log("Searching for asap and asap-path-executables projects...");
+  console.log("Searching for asap and asap-path-executables prompt...");
 
-  while (true) {
-    const projectsResponse = await humanloop.projects.list({
-      page,
-      filter: "asap",
-    });
+  const promptsResponse = await humanloop.prompts.list({
+    page,
+    name: "asap",
+  });
 
-    totalProjects = projectsResponse.data.total;
-    searchedProjects += projectsResponse.data.records.length;
+  const maybeAsapPrompt = promptsResponse.data.find(
+    (prompt) => prompt.name === "asap"
+  );
 
-    if (totalProjects === undefined) {
-      // Just in case something has gone wrong.
-      throw new Error(
-        "total number of projects unknown; exiting to avoid infinite loop"
-      );
-    }
+  const maybeAsapPathExecutablesPrompt = promptsResponse.data.find(
+    (prompt) => prompt.name === "asap-path-executables"
+  );
 
-    const maybeAsapProject = projectsResponse.data.records.find(
-      (project) => project.name === "asap"
-    );
+  if (maybeAsapPrompt !== undefined) {
+    console.log("Found asap prompt");
 
-    const maybeAsapPathExecutablesProject = projectsResponse.data.records.find(
-      (project) => project.name === "asap-path-executables"
-    );
+    asapPrompt = maybeAsapPrompt;
+  }
 
-    if (maybeAsapProject !== undefined) {
-      console.log("Found asap project");
-
-      asapProject = maybeAsapProject;
-    }
-
-    if (maybeAsapPathExecutablesProject !== undefined) {
-      console.log("Found asap-path-executables project");
-      asapPathExecutablesProject = maybeAsapPathExecutablesProject;
-    }
-
-    if (
-      searchedProjects >= totalProjects ||
-      (asapProject !== undefined && asapPathExecutablesProject !== undefined)
-    ) {
-      break;
-    }
-
-    page += 1;
+  if (maybeAsapPathExecutablesPrompt !== undefined) {
+    console.log("Found asap-path-executables project");
+    asapPathExecutablesPrompt = maybeAsapPathExecutablesPrompt;
   }
 
   // Create the `asap` project if it does not exist.
-  if (asapProject === undefined) {
-    console.log("No asap project found. Creating...");
-    const asapProjectCreationResponse = await humanloop.projects.create({
-      name: "asap",
+  if (asapPrompt === undefined) {
+    console.log("No asap prompt found. Creating...");
+    const asapPromptCreationParameters = JSON.parse(
+      fs.readFileSync("prompts/asap-prompt.json").toString()
+    );
+    const asapProjectCreationResponse = await humanloop.prompts.upsert({
+      path: "asap",
+      ...asapPromptCreationParameters,
     });
-    asapProject = asapProjectCreationResponse.data;
-    console.log("Created asap project");
-
-    // Register the `asap` model config.
-    await registerAsapModelConfig(humanloop, asapProject);
-  } else {
-    console.log("Found asap project");
-
-    // Check that the `asap` project has a model config.
-    // If there is any active_config, we assume it is the correct one.
-    if (asapProject.active_config === undefined) {
-      // Register the `asap` model config.
-      await registerAsapModelConfig(humanloop, asapProject);
-    }
+    asapPrompt = asapProjectCreationResponse;
+    console.log("Created asap prompt");
   }
 
   // Create the `asap-path-executables` project if it does not exist.
-  if (asapPathExecutablesProject === undefined) {
-    console.log("No asap-path-executables project found. Creating...");
-    const asapPathExecutablesProjectCreationResponse =
-      await humanloop.projects.create({
-        name: "asap-path-executables",
+  if (asapPathExecutablesPrompt === undefined) {
+    console.log("No asap-path-executables prompt found. Creating...");
+    const asapPathExecutablesPromptCreationParameters = JSON.parse(
+      fs.readFileSync("prompts/asap-path-exec-prompt.json").toString()
+    );
+    const asapPathExecutablesPromptCreationResponse =
+      await humanloop.prompts.upsert({
+        path: "asap-path-executables",
+        ...asapPathExecutablesPromptCreationParameters,
       });
-    asapPathExecutablesProject =
-      asapPathExecutablesProjectCreationResponse.data;
-    console.log("Created asap-path-executables project");
-
-    // Register the `asap-path-executables` model config.
-    await registerAsapPathExecutablesModelConfig(
-      humanloop,
-      asapPathExecutablesProject
-    );
-  } else {
-    console.log(
-      JSON.stringify(asapPathExecutablesProject.active_config, null, 2)
-    );
-
-    console.log("Found asap-path-executables project");
-
-    // Check that the `asap-path-executables` project has a model config.
-    // If there is any active_config, we assume it is the correct one.
-    if (asapPathExecutablesProject.active_config === undefined) {
-      // Register the `asap-path-executables` model config.
-      await registerAsapPathExecutablesModelConfig(
-        humanloop,
-        asapPathExecutablesProject
-      );
-    }
+    asapPathExecutablesPrompt = asapPathExecutablesPromptCreationResponse;
+    console.log("Created asap-path-executables prompt");
   }
 
   return "1";
-};
-
-const registerAsapModelConfig = async (
-  humanloop: Humanloop,
-  asapProject: ProjectResponse
-) => {
-  // Read the model config from file `asap-model-config.json`.
-  const modelConfig = JSON.parse(
-    fs.readFileSync("model-configs/asap-model-config.json").toString()
-  );
-
-  // Register the model config for the `asap` project.
-  console.log("Registering model config to asap project...");
-  const registeredModelConfig = await humanloop.modelConfigs.register({
-    project_id: asapProject.id,
-    ...modelConfig,
-  });
-
-  if (registeredModelConfig.status !== 200) {
-    throw new Error(`failed to register model config for asap project.`);
-  }
-};
-
-const registerAsapPathExecutablesModelConfig = async (
-  humanloop: Humanloop,
-  asapPathExecutablesProject: ProjectResponse
-) => {
-  // Read the model config from file `asap-path-exec-model-config.json`.
-  const modelConfig = JSON.parse(
-    fs.readFileSync("model-configs/asap-path-exec-model-config.json").toString()
-  );
-
-  // Register the model config for the `asap` project.
-  console.log("Registering model config to asap-path-executables project...");
-  const registeredModelConfig = await humanloop.modelConfigs.register({
-    project_id: asapPathExecutablesProject.id,
-    ...modelConfig,
-  });
-
-  if (registeredModelConfig.status !== 200) {
-    throw new Error(
-      `failed to register model config for asap-path-executables project.`
-    );
-  }
 };

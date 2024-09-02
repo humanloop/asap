@@ -31,6 +31,7 @@ To start using `asap`, do the following:
 1. Run `npm build` (required as the project is written in TypeScript and needs to be compiled)
 1. By this point, you should be able to directly invoke `asap help` from the command line.
    - If the `asap` executable is not found, you may need to add your global `npm` binary directory to your `PATH`. To find this directory, run `echo $(npm config get prefix)/bin`
+   - You can also run it directly with `npx ts-node src/index.ts help`
 1. Next, configure your installation by running `asap init`. You'll be asked to provide your API keys for both Humanloop and OpenAI.
    - The program will then install a project called `asap` in your Humanloop account and deploy the relevant model config to that project.
 

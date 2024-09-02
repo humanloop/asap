@@ -1,5 +1,4 @@
 import { Command } from "@commander-js/extra-typings";
-import { ChatMessage } from "humanloop";
 import {
   chat,
   chatMessageFromShellCommandOutput,
@@ -20,6 +19,7 @@ import ora from "ora";
 import { applyPatch, parseRawPatchString } from "../utils/patch";
 import { input } from "@inquirer/prompts";
 import { getProjectRepresentation } from "../ctags";
+import { ChatMessage } from "humanloop/api";
 
 const tools = ["cli_call", "patch", "done"];
 
@@ -98,11 +98,12 @@ export const doCommand = new Command("do")
 
       spinner.stop();
 
-      if (!assistantResponse.tool_call) {
+      if (!assistantResponse.toolCalls) {
         // It's proving difficult to get the model to always end with a tool call.
         // Instead, it seems to just return an assistant message, so if that happens,
         // we'll just print the message and ask the user what to do.
-        assistantResponse.content && logAssistant(assistantResponse.content);
+        assistantResponse.content &&
+          logAssistant(assistantResponse?.content as string);
 
         // Ask for confirmation
         const confirmation = await input({
@@ -122,36 +123,41 @@ export const doCommand = new Command("do")
         }
       }
 
-      const toolCall = assistantResponse.tool_call;
-      if (!tools.includes(toolCall.name)) {
+      const toolCall = assistantResponse.toolCalls[0];
+      const toolCallId = toolCall.id;
+      if (!tools.includes(toolCall.function.name)) {
         const resolvedToolName = tools.find((tool) =>
-          toolCall.name.includes(tool)
+          toolCall.function.name.includes(tool)
         );
         if (resolvedToolName) {
           console.error(
-            `received unexpected tool call: ${toolCall.name}; resolved to ${resolvedToolName} and proceeding`
+            `received unexpected tool call: ${toolCall.function.name}; resolved to ${resolvedToolName} and proceeding`
           );
-          toolCall.name = resolvedToolName;
+          toolCall.function.name = resolvedToolName;
         } else {
           throw new Error(
-            `unable to resolve unexpected tool call with name: ${toolCall.name}`
+            `unable to resolve unexpected tool call with name: ${toolCall.function.name}`
           );
         }
       }
 
-      if (toolCall.name === "cli_call") {
+      if (toolCall.function.name === "cli_call") {
         const shellCommand = shellCommandFromToolCall(toolCall);
         logCommand(`${shellCommand.command} ${shellCommand.args.join(" ")}`);
         logExplanation(shellCommand.explanation);
         const shellCommandOutput = await runCommand(shellCommand);
         logCommandOutput(shellCommandOutput);
-        const toolResponse =
-          chatMessageFromShellCommandOutput(shellCommandOutput);
+        const toolResponse = chatMessageFromShellCommandOutput(
+          shellCommandOutput,
+          toolCallId
+        );
         messages.push(toolResponse);
-      } else if (toolCall.name === "patch") {
+      } else if (toolCall.function.name === "patch") {
         let patchCommand: { patch: string; explanation: string };
         try {
-          patchCommand = JSON.parse(toolCall.arguments);
+          patchCommand = toolCall.function.arguments
+            ? JSON.parse(toolCall.function.arguments)
+            : { patch: "", explanation: "" };
         } catch (e) {
           console.error(`failed to parse patch command arguments: ${e}`);
           messages.push({
@@ -217,13 +223,14 @@ export const doCommand = new Command("do")
             content: confirmation,
           });
         }
-      } else if (toolCall.name === "done") {
-        const doneMessage = JSON.parse(toolCall.arguments).done_message;
-        console.log(doneMessage);
+      } else if (toolCall.function.name === "done") {
+        const doneMessage = toolCall.function.arguments
+          ? JSON.parse(toolCall.function.arguments).done_message
+          : "Done!";
         break;
       } else {
         throw new Error(
-          `unknown tool call '${toolCall.name}' (with arguments: ${toolCall.arguments})`
+          `unknown tool call '${toolCall.function.name}' (with arguments: ${toolCall.function.arguments})`
         );
       }
     }

@@ -1,10 +1,10 @@
-import { ChatMessage, ChatResponse, Humanloop, ToolCall } from "humanloop";
-import { HUMANLOOP_API_KEY, HUMANLOOP_BASE_URL, OPENAI_API_KEY } from "./env";
+import { ChatMessage, PromptCallResponse, ToolCall } from "humanloop/api";
+import { HUMANLOOP_API_KEY, HUMANLOOP_BASE_URL } from "./env";
+import { HumanloopClient } from "humanloop";
 
-const humanloop = new Humanloop({
-  basePath: HUMANLOOP_BASE_URL,
-  apiKey: HUMANLOOP_API_KEY,
-  openaiApiKey: OPENAI_API_KEY,
+const client = new HumanloopClient({
+  environment: HUMANLOOP_BASE_URL,
+  apiKey: HUMANLOOP_API_KEY || "",
 });
 
 export const chat = async (messages: ChatMessage[]): Promise<ChatMessage> => {
@@ -19,15 +19,16 @@ export const chat = async (messages: ChatMessage[]): Promise<ChatMessage> => {
     }
 
     try {
-      let response: ChatResponse;
+      let response: PromptCallResponse;
 
-      response = (
-        await humanloop.chatDeployed({
-          project: "asap",
-          inputs: {},
-          messages,
-        })
-      ).data;
+      response = await client.prompts.call({
+        path: "asap",
+        inputs: {},
+        messages,
+        providerApiKeys: {
+          openai: process.env.OPENAI_API_KEY,
+        },
+      });
 
       return handleSuccessfulGeneration(response);
     } catch (e: any) {
@@ -55,17 +56,18 @@ function sleep(ms: number) {
   });
 }
 
-const handleSuccessfulGeneration = (response: ChatResponse): ChatMessage => {
-  const data = response.data[0];
+const handleSuccessfulGeneration = (
+  response: PromptCallResponse
+): ChatMessage => {
+  const data = response.logs[0];
 
-  if (data.finish_reason !== "tool_call") {
+  if (data.finishReason !== "tool_call") {
     return { role: "assistant", content: data.output };
   } else {
-    const toolCall = response.provider_responses[0].choices[0].message
-      .function_call as ToolCall;
     return {
       role: "assistant",
-      tool_call: toolCall,
+      content: data.output,
+      toolCalls: data.outputMessage?.toolCalls,
     };
   }
 };
@@ -83,20 +85,23 @@ export interface ShellCommandOutput {
 }
 
 export const shellCommandFromToolCall = (toolCall: ToolCall): ShellCommand => {
-  if (toolCall.name === "cli_call") {
-    const args = JSON.parse(toolCall.arguments);
+  if (toolCall.function.name === "cli_call") {
+    const args = toolCall.function.arguments
+      ? JSON.parse(toolCall.function.arguments)
+      : { command: "", arguments: "", explanation: "" };
     return {
       command: args.command,
       args: args.arguments.split(" "),
       explanation: args.explanation,
     };
   } else {
-    throw new Error(`unknown tool call name '${toolCall.name}'`);
+    throw new Error(`unknown tool call name '${toolCall.function.name}'`);
   }
 };
 
 export const chatMessageFromShellCommandOutput = (
-  shellCommandOutput: ShellCommandOutput
+  shellCommandOutput: ShellCommandOutput,
+  toolCallId: string
 ): ChatMessage => {
   if (
     shellCommandOutput.stdout.length > 500 ||
@@ -108,6 +113,7 @@ export const chatMessageFromShellCommandOutput = (
     return {
       role: "tool",
       name: "cli_call",
+      toolCallId: toolCallId,
       content: JSON.stringify(
         {
           warning:
@@ -127,6 +133,7 @@ export const chatMessageFromShellCommandOutput = (
   return {
     role: "tool",
     name: "cli_call",
+    toolCallId: toolCallId,
     content: JSON.stringify(shellCommandOutput, null, 2),
   };
 };
@@ -136,17 +143,17 @@ export const getRelevantExecutables = async ({
 }: {
   inputs: { query: string; executables: string };
 }): Promise<string[]> => {
-  let response: ChatResponse;
+  let response: PromptCallResponse;
 
-  response = (
-    await humanloop.chatDeployed({
-      project: "asap-path-executables",
-      inputs,
-      messages: [],
-    })
-  ).data;
+  response = await client.prompts.call({
+    path: "asap-path-executables",
+    inputs,
+    messages: [],
+  });
 
-  const output = response.data[0].output;
+  const output = response.logs[0].outputMessage;
   // Return a list of string from `output`'s comma-separated list
-  return output.split(",").map((s: string) => s.trim());
+  return output && output.content
+    ? (output.content as string).split(",").map((s: string) => s.trim())
+    : [];
 };
