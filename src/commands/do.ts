@@ -5,7 +5,7 @@ import {
   getRelevantExecutables,
   shellCommandFromToolCall,
 } from "../llm";
-import { runCommand } from "../runCommand";
+import { PersistentShell } from "../runCommand";
 import {
   logAssistant,
   logCommand,
@@ -32,6 +32,7 @@ export const doCommand = new Command("do")
   )
   .option("--path", "Get a list of executables available on PATH")
   .action(async (instruction, opts) => {
+    const shell = new PersistentShell();
     const messages: ChatMessage[] = [];
 
     if (!instruction) {
@@ -59,7 +60,7 @@ export const doCommand = new Command("do")
       console.log("Getting environment information...");
       const GET_PATH_EXECUTABLES_COMMAND =
         "echo $PATH | tr ':' '\n' | xargs -I {} ls {} 2>/dev/null | sort -u | tr '\n' ','";
-      const pathExecutables = await runCommand({
+      const pathExecutables = await shell.executeCommand({
         command: GET_PATH_EXECUTABLES_COMMAND,
         args: [],
         explanation: "Retrieving all executables in your PATH",
@@ -145,7 +146,7 @@ export const doCommand = new Command("do")
         const shellCommand = shellCommandFromToolCall(toolCall);
         logCommand(`${shellCommand.command} ${shellCommand.args.join(" ")}`);
         logExplanation(shellCommand.explanation);
-        const shellCommandOutput = await runCommand(shellCommand);
+        const shellCommandOutput = await shell.executeCommand(shellCommand);
         logCommandOutput(shellCommandOutput);
         const toolResponse = chatMessageFromShellCommandOutput(
           shellCommandOutput,
